@@ -3,6 +3,8 @@ import shutil
 import subprocess
 import os
 
+
+os.chdir('..')
 data_dir = '/opt/ml/input/data/training'
 source_code_dir = '/opt/ml/code'
 
