@@ -2,11 +2,9 @@ import tarfile
 import shutil
 import subprocess
 import os
-import torch
 
 data_dir = '/opt/ml/input/data/training'
 source_code_dir = '/opt/ml/code'
-model_output_dir = os.environ['SM_MODEL_DIR'] # get model output dir from env
 
 for item in os.listdir(data_dir):
     source_item = os.path.join(data_dir, item)
@@ -18,6 +16,9 @@ for item in os.listdir(data_dir):
         # Sao chép tệp vào thư mục đích
         shutil.copy2(source_item, destination_item)  # Dùng copy2 để giữ nguyên thời gian sửa đổi tệp
         print(f"Đã sao chép {source_item} -> {destination_item}")
+
+#shutil.copytree(data_dir, source_code_dir, dirs_exist_ok=True)
+#shutil.copytree(data_dir, source_code_dir, dirs_exist_ok=True)
 
 
 source_dir = '/opt/ml/input/data/code'  
@@ -52,7 +53,6 @@ for root, dirs, files in os.walk(source_dir):
 with tarfile.open('data_train.tar.gz', 'r:gz') as tar:
     tar.extractall()
 
-
 subprocess.run([
     'python', 'training.py',
     '--output_dir', './OUTPUT_densenet121/',
@@ -68,19 +68,12 @@ subprocess.run([
     '--input_size', '224',
     '--random_resize_range', '0.5', '1.0',
     '--datasets_names', 'chexpert',
-    '--device', 'cpu',
-     '--model_output_dir', model_output_dir  # pass model output dir to training.py
+    '--device', 'cpu'
 ], check=True)
 
 source_dir = './OUTPUT_densenet121/'
-destination_dir = model_output_dir # use env from sagemaker
+destination_dir = '/opt/ml/model/'
 
 os.makedirs(destination_dir, exist_ok=True)
 
-# compress to .tar.gz
-import shutil
-model_path = os.path.join(destination_dir, 'model.tar.gz')
-with tarfile.open(model_path, "w:gz") as tar:
-  tar.add(source_dir, arcname="model")
-
-print(f"Model is save to: {model_path}")
+shutil.copytree(source_dir, destination_dir, dirs_exist_ok=True)
