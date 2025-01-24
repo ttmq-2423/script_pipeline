@@ -4,6 +4,8 @@ import subprocess
 import shutil
 import tarfile
 
+
+os.chdir('..')
 # Get the source code directory
 source_dir = '/opt/ml/input/data/code'  
 destination_dir = '/opt/ml/code'  # Destination directory
