@@ -3,7 +3,7 @@ import os
 import subprocess
 import shutil
 import tarfile
-
+import boto3
 
 os.chdir('..')
 # Get the source code directory
@@ -81,6 +81,16 @@ report_dict = {
              }
     }
 }
+
+s3_bucket = "evaluate-output"
+s3_key = "output/evaluation.json"
+
+# Upload data to S3
+s3 = boto3.client("s3")
+
+with open(model_path, "rb") as f:
+    s3.upload_fileobj(f, s3_bucket, s3_key)
+    
 
 # Write the report to a file, in the model_output_dir
 with open(os.path.join(model_output_dir, "evaluation.json"), "w") as f:
