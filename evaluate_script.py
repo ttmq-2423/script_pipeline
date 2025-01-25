@@ -42,18 +42,20 @@ model_output_dir = '/opt/ml/model' # use this dir to store model artifacts
 
 # Run the evaluation script
 result = subprocess.run([
-    "python", "evaluate.py",
-    "--batch_size", "8",
+    "python", "/opt/ml/code/evaluate.py",  # Sử dụng đường dẫn tuyệt đối
     "--finetune", "Pretrain_densenet121.pth",
     "--model", "densenet121",
-    "--data_path", "/opt/ml/input/data/training/",
+    "--data_path", "data/CheXpert-v1.0/",  # Giữ đường dẫn tương đối
     "--num_workers", "11",
-    "--test_list", "/opt/ml/input/data/training/test1.csv",
+    "--train_list", "data/CheXpert-v1.0/train.csv", # Giữ đường dẫn tương đối
+    "--val_list", "data/CheXpert-v1.0/test1.csv", # Giữ đường dẫn tương đối
+    "--test_list", "data/CheXpert-v1.0/test1.csv", # Giữ đường dẫn tương đối
     "--nb_classes", "5",
     "--eval_interval", "10",
     "--dataset", "chexpert",
     "--aa", "rand-m6-mstd0.5-inc1",
-    "--device", "cpu"
+    "--device", "cpu",
+    "--batch_size", "8"
 ], capture_output=True, text=True, check=True)
 
 # Capture the output from evaluate.py and save into result.txt
