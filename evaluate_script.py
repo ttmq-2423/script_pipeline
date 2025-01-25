@@ -5,7 +5,7 @@ import shutil
 import tarfile
 
 
-
+os.chdir('..')
 # Get the source code directory
 source_dir = '/opt/ml/input/data/code'  
 destination_dir = '/opt/ml/code'  # Destination directory
@@ -42,7 +42,7 @@ model_output_dir = '/opt/ml/model' # use this dir to store model artifacts
 
 # Run the evaluation script
 result = subprocess.run([
-    "python", "/opt/ml/code/evaluate.py",  # Sử dụng đường dẫn tuyệt đối
+    "python", "evaluate.py",  # Sử dụng đường dẫn tuyệt đối
     "--finetune", "Pretrain_densenet121.pth",
     "--model", "densenet121",
     "--data_path", "data/CheXpert-v1.0/",  # Giữ đường dẫn tương đối
