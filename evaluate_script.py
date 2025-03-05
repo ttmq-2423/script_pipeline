@@ -7,7 +7,7 @@ import tarfile
 
 os.chdir('..')
 # Get the source code directory
-source_dir = '/opt/ml/input/data/code'  
+source_dir = '/opt/ml/processing/code'  
 destination_dir = '/opt/ml/code'  # Destination directory
 
 # Check if the destination directory exists, and create it if it doesn't
