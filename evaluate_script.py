@@ -38,7 +38,7 @@ for root, dirs, files in os.walk(source_dir):
 
 
 # Path to save model artifacts
-model_output_dir = '/opt/ml/model' # use this dir to store model artifacts
+model_output_dir = '/opt/ml/processing/evaluation' # use this dir to store model artifacts
 
 # Run the evaluation script
 result = subprocess.run([
