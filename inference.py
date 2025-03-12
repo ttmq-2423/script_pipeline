@@ -3,21 +3,20 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 import io
+import base64
 
 app = Flask(__name__)
 
 # Danh sách class bệnh
 class_names = ['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion']
 
-
+# Load model
 def load_model():
     import torchvision.models as models
     model_instance = models.__dict__['densenet121'](num_classes=len(class_names))
 
     checkpoint = torch.load('/opt/ml/model/Pretrain_densenet121.pth', map_location=torch.device('cpu'))
-    print('type checkpoint.pth:', type(checkpoint))
-    print('Checkpoint keys:', checkpoint.keys())
-
+    
     if 'state_dict' in checkpoint:
         checkpoint_model = checkpoint['state_dict']
     elif 'model' in checkpoint:
@@ -31,7 +30,6 @@ def load_model():
 
     return model_instance
 
-# Load model khi container khởi động
 model = load_model()
 
 # Tiền xử lý ảnh
@@ -44,23 +42,33 @@ def preprocess_image(image_bytes):
     ])
     return transform(image).unsqueeze(0)
 
+# API Health Check
 @app.route("/ping", methods=["GET"])
 def ping():
-    return "OK", 200  # Health check
+    return "OK", 200
 
+# API Predict
 @app.route("/invocations", methods=["POST"])
 def predict():
     try:
-        if "file" not in request.files:
-            return jsonify({"error": "No file uploaded"}), 400
+        # Đọc JSON từ request
+        data = request.get_json()
 
-        file = request.files["file"]
-        image_tensor = preprocess_image(file.read())
+        if "image" not in data:
+            return jsonify({"error": "Missing 'image' key in JSON request"}), 400
 
+        # Decode base64 -> bytes
+        image_bytes = base64.b64decode(data["image"])
+
+        # Tiền xử lý ảnh
+        image_tensor = preprocess_image(image_bytes)
+
+        # Dự đoán
         with torch.no_grad():
             output = model(image_tensor).tolist()
 
         return jsonify({"predictions": output})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
