@@ -1,24 +1,17 @@
 from flask import Flask, request, jsonify
 import torch
-import torchvision.models as models
-import os
-import random
+import torchvision.transforms as transforms
+from PIL import Image
+import io
 
 app = Flask(__name__)
 
-# Định nghĩa danh sách class
+# Danh sách class bệnh
 class_names = ['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion']
 
-def seed_everything(seed):
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    torch.manual_seed(seed)
-
-seed_everything(10)
-device = torch.device('cpu')
-
-# Hàm load model
+# Giữ nguyên phần load model của bà
 def load_model():
+    import torchvision.models as models
     model_instance = models.__dict__['densenet121'](num_classes=len(class_names))
 
     checkpoint = torch.load('/opt/ml/model/Pretrain_densenet121.pth', map_location=torch.device('cpu'))
@@ -34,25 +27,34 @@ def load_model():
 
     model_instance.load_state_dict(checkpoint_model, strict=False)
     model_instance.eval()
-    model_instance.to(device)
+    model_instance.to(torch.device('cpu'))
 
     return model_instance
 
 # Load model khi container khởi động
 model = load_model()
 
-@app.route("/ping", methods=["GET"])
-def ping():
-    return "OK", 200  # Health check
+# Tiền xử lý ảnh
+def preprocess_image(image_bytes):
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    return transform(image).unsqueeze(0)
 
 @app.route("/invocations", methods=["POST"])
 def predict():
     try:
-        data = request.get_json()
-        input_tensor = torch.tensor(data["input"]).to(device)
+        if "file" not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        file = request.files["file"]
+        image_tensor = preprocess_image(file.read())
 
         with torch.no_grad():
-            output = model(input_tensor).tolist()
+            output = model(image_tensor).tolist()
 
         return jsonify({"predictions": output})
     except Exception as e:
