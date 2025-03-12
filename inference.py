@@ -9,7 +9,7 @@ app = Flask(__name__)
 # Danh sách class bệnh
 class_names = ['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion']
 
-# Giữ nguyên phần load model của bà
+
 def load_model():
     import torchvision.models as models
     model_instance = models.__dict__['densenet121'](num_classes=len(class_names))
@@ -43,6 +43,10 @@ def preprocess_image(image_bytes):
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     return transform(image).unsqueeze(0)
+
+@app.route("/ping", methods=["GET"])
+def ping():
+    return "OK", 200  # Health check
 
 @app.route("/invocations", methods=["POST"])
 def predict():
