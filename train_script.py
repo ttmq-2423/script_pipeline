@@ -8,6 +8,8 @@ import os
 data_dir = '/opt/ml/input/data/training'
 source_code_dir = '/opt/ml/code'
 
+
+
 for item in os.listdir(data_dir):
     source_item = os.path.join(data_dir, item)
     
@@ -25,6 +27,8 @@ for item in os.listdir(data_dir):
 
 source_dir = '/opt/ml/input/data/code'  
 destination_dir = '/opt/ml/code'  # Thư mục đích
+os.chdir(destination_dir)
+
 
 # Kiểm tra nếu thư mục đích không tồn tại, tạo mới
 if not os.path.exists(destination_dir):
