@@ -4,11 +4,14 @@ import subprocess
 import shutil
 import tarfile
 
+#subprocess.run(['git', 'clone', 'https://github.com/ttmq-2423/medical_mae.git'], check=True)
+os.chdir('medical_mae')
+
 # Run the evaluation script
 result = subprocess.run([
     "python", "Brute_force.py", 
     "--batch_size", "8",
-    "--finetune", "checkpoint.pth",
+    "--finetune", "./OUTPUT/checkpoint.pth",
     "--model", "conv_vit",
     "--data_path", "data/CheXpert-v1.0/",  
     "--num_workers", "1",
