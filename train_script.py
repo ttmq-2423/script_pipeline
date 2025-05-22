@@ -42,8 +42,7 @@ shutil.copytree(log_dir, destination_dir, dirs_exist_ok=True)
 
 log_dir = './OUTPUT/log.txt'
 destination_dir = '/opt/ml/output/'
-os.makedirs(destination_dir, exist_ok=True)
-shutil.copy(log_dir, destination_dir, dirs_exist_ok=True)
+shutil.copy(log_dir, destination_dir)
 
 
 model_dir = './OUTPUT/checkpoint.pth'
@@ -51,4 +50,4 @@ destination_dir = '/opt/ml/model/'
 
 os.makedirs(destination_dir, exist_ok=True)
 
-shutil.copy(model_dir, destination_dir, dirs_exist_ok=True)
+shutil.copy(model_dir, destination_dir)
