@@ -4,14 +4,14 @@ import subprocess
 import shutil
 import tarfile
 
-#subprocess.run(['git', 'clone', 'https://github.com/ttmq-2423/medical_mae.git'], check=True)
+subprocess.run(['git', 'clone', 'https://github.com/ttmq-2423/medical_mae.git'], check=True)
 os.chdir('medical_mae')
 
 # Run the evaluation script
 result = subprocess.run([
     "python", "Brute_force.py", 
     "--batch_size", "8",
-    "--finetune", "./OUTPUT/checkpoint.pth",
+    "--finetune", "./checkpoint.pth",
     "--model", "conv_vit",
     "--data_path", "data/CheXpert-v1.0/",  
     "--num_workers", "1",
@@ -25,11 +25,11 @@ result = subprocess.run([
     "--save", "figure"
 ], check=True, capture_output=True, text=True)  # important: capture output as string
 
-model_output_dir = '/opt/ml/processing/evaluation' 
-os.makedirs(model_output_dir, exist_ok=True)
+destination_dir = '/opt/ml/processing/evaluation' 
+os.makedirs(destination_dir, exist_ok=True)
 
 # Save stdout and stderr to result.txt
-with open(os.path.join(model_output_dir, "result.txt"), "w") as f:
+with open(os.path.join(destination_dir, "result.txt"), "w") as f:
    f.write(result.stdout)
    f.write(result.stderr)
 
@@ -70,7 +70,10 @@ report_dict = {
 }
 
 # Write to JSON
-with open(os.path.join(model_output_dir, "evaluation.json"), "w") as f:
+with open(os.path.join(destination_dir, "evaluation.json"), "w") as f:
     json.dump(report_dict, f, indent=4)
 
-print(f"Metrics report created successfully to {model_output_dir}")
+log_dir = './figure/'
+shutil.copytree(log_dir, destination_dir, dirs_exist_ok=True)
+
+print(f"Metrics report created successfully to {destination_dir}")
