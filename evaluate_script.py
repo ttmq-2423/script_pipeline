@@ -3,97 +3,71 @@ import os
 import subprocess
 import shutil
 import tarfile
-# import boto3
-
-os.chdir('..')
-# Get the source code directory
-source_dir = '/opt/ml/processing/code'  
-destination_dir = '/opt/ml/code'  # Destination directory
-
-# Check if the destination directory exists, and create it if it doesn't
-if not os.path.exists(destination_dir):
-    os.makedirs(destination_dir)
-
-# Loop through the source directory and copy files to the destination directory
-for root, dirs, files in os.walk(source_dir):
-    for file in files:
-        # Full path to the source file
-        source_file = os.path.join(root, file)
-        
-        # Create the destination path, preserving subdirectory structure
-        relative_path = os.path.relpath(root, source_dir)  # Compute the relative path from the source
-        destination_folder = os.path.join(destination_dir, relative_path)  # Create the destination folder to copy into
-
-        # Check if destination folder exists and make it if it doesn't
-        if not os.path.exists(destination_folder):
-            os.makedirs(destination_folder)
-
-        # Full path to the destination file
-        destination_file = os.path.join(destination_folder, file)
-
-        # Copy the file to the new directory
-        shutil.copy(source_file, destination_file)
-
-        print(f'Successfully copied: {source_file} -> {destination_file}')
-
-
-# Path to save model artifacts
-model_output_dir = '/opt/ml/processing/evaluation' # use this dir to store model artifacts
 
 # Run the evaluation script
 result = subprocess.run([
-    "python", "evaluate.py",  # Sử dụng đường dẫn tuyệt đối
-    "--finetune", "Pretrain_densenet121.pth",
-    "--model", "densenet121",
-    "--data_path", "data/CheXpert-v1.0/",  # Giữ đường dẫn tương đối
-    "--num_workers", "11",
-    "--train_list", "data/CheXpert-v1.0/train.csv", # Giữ đường dẫn tương đối
-    "--val_list", "data/CheXpert-v1.0/test1.csv", # Giữ đường dẫn tương đối
-    "--test_list", "data/CheXpert-v1.0/test1.csv", # Giữ đường dẫn tương đối
+    "python", "Brute_force.py", 
+    "--batch_size", "8",
+    "--finetune", "checkpoint.pth",
+    "--model", "conv_vit",
+    "--data_path", "data/CheXpert-v1.0/",  
+    "--num_workers", "1",
+    "--train_list", "data/CheXpert-v1.0/train.csv", 
+    "--val_list", "data/CheXpert-v1.0/test1.csv", 
+    "--test_list", "data/CheXpert-v1.0/test1.csv", 
     "--nb_classes", "5",
-    "--eval_interval", "10",
     "--dataset", "chexpert",
     "--aa", "rand-m6-mstd0.5-inc1",
     "--device", "cpu",
-    "--batch_size", "8"
-], capture_output=True, text=True, check=True)
+    "--save", "figure"
+], check=True, capture_output=True, text=True)  # important: capture output as string
 
-# Capture the output from evaluate.py and save into result.txt
+model_output_dir = '/opt/ml/processing/evaluation' 
+os.makedirs(model_output_dir, exist_ok=True)
+
+# Save stdout and stderr to result.txt
 with open(os.path.join(model_output_dir, "result.txt"), "w") as f:
    f.write(result.stdout)
    f.write(result.stderr)
+
 print(result.stdout)
 print(result.stderr)
 
-# Extract auc from the result
-auc_avg = 0 # default value if can't get
+# Extract metrics
+auc_avg = 0.0
+auc_per_label = []
+
 for line in result.stdout.splitlines():
-  if "AUC avg: " in line:
-    auc_avg = float(line.split("AUC avg: ")[1].split()[0])
+    if "AUC avg:" in line:
+        try:
+            auc_avg = float(line.split("AUC avg:")[1].split("%")[0].strip())
+        except Exception as e:
+            print(f"Error parsing AUC avg: {e}")
+    elif "AUC for each label:" in line:
+        try:
+            label_str = line.split("AUC for each label:")[1].strip()
+            label_str = label_str.strip("[]")
+            auc_per_label = [float(x.strip()) for x in label_str.split(",")]
+        except Exception as e:
+            print(f"Error parsing AUC per label: {e}")
 
-print(f"Extracted auc value: {auc_avg}")
+print(f"Extracted AUC avg: {auc_avg}")
+print(f"Extracted AUC per label: {auc_per_label}")
 
-# Create the metrics report dictionary
+# Create report
 report_dict = {
-    "regression_metrics": {
-        "auc": {
-            "value": auc_avg,
-             }
+    "metrics": {
+        "auc_avg": {
+            "value": auc_avg
+        },
+        "auc_per_label": {
+            "value": auc_per_label
+        }
     }
 }
 
-#s3_bucket = "evaluate-output"
-#s3_key = "output/evaluation.json"
-
-# Upload data to S3
-# s3 = boto3.client("s3")
-
-#with open(model_path, "rb") as f:
-#    s3.upload_fileobj(f, s3_bucket, s3_key)
-    
-
-# Write the report to a file, in the model_output_dir
+# Write to JSON
 with open(os.path.join(model_output_dir, "evaluation.json"), "w") as f:
-    json.dump(report_dict, f)
+    json.dump(report_dict, f, indent=4)
 
 print(f"Metrics report created successfully to {model_output_dir}")
