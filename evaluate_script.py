@@ -11,7 +11,7 @@ os.chdir('medical_mae')
 result = subprocess.run([
     "python", "Brute_force.py", 
     "--batch_size", "8",
-    "--finetune", "./checkpoint.pth",
+    "--finetune", "/opt/ml/processing/model/checkpoint.pth",
     "--model", "conv_vit",
     "--data_path", "data/CheXpert-v1.0/",  
     "--num_workers", "1",
