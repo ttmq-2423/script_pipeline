@@ -3,6 +3,8 @@ import shutil
 import subprocess
 import os
 
+subprocess.run(['git', 'clone', 'https://github.com/ttmq-2423/medical_mae.git'], check=True)
+os.chdir('medical_mae')
 
 subprocess.run([
     'python', 'main_finetune_chestxray.py',
