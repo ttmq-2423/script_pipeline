@@ -4,26 +4,37 @@ import subprocess
 import shutil
 import tarfile
 
+model_tar_path = "/opt/ml/processing/model/model.tar.gz"
+extract_dir = "/opt/ml/processing/model"
+print("File trong model dir:", os.listdir(extract_dir))
+
+
 subprocess.run(['git', 'clone', 'https://github.com/ttmq-2423/medical_mae.git'], check=True)
 os.chdir('medical_mae')
 
 # Run the evaluation script
-result = subprocess.run([
-    "python", "Brute_force.py", 
-    "--batch_size", "8",
-    "--finetune", "/opt/ml/processing/model/checkpoint.pth",
-    "--model", "conv_vit",
-    "--data_path", "data/CheXpert-v1.0/",  
-    "--num_workers", "1",
-    "--train_list", "data/CheXpert-v1.0/train.csv", 
-    "--val_list", "data/CheXpert-v1.0/test1.csv", 
-    "--test_list", "data/CheXpert-v1.0/test1.csv", 
-    "--nb_classes", "5",
-    "--dataset", "chexpert",
-    "--aa", "rand-m6-mstd0.5-inc1",
-    "--device", "cpu",
-    "--save", "figure"
-], check=True, capture_output=True, text=True)  # important: capture output as string
+try 
+    result = subprocess.run([
+        "python", "Brute_force.py", 
+        "--batch_size", "8",
+        "--finetune", "/opt/ml/processing/model/checkpoint.pth",
+        "--model", "conv_vit",
+        "--data_path", "data/CheXpert-v1.0/",  
+        "--num_workers", "1",
+        "--train_list", "data/CheXpert-v1.0/train.csv", 
+        "--val_list", "data/CheXpert-v1.0/test1.csv", 
+        "--test_list", "data/CheXpert-v1.0/test1.csv", 
+        "--nb_classes", "5",
+        "--dataset", "chexpert",
+        "--aa", "rand-m6-mstd0.5-inc1",
+        "--device", "cpu",
+        "--save", "figure"
+    ], check=True, capture_output=True, text=True)  # important: capture output as string
+except subprocess.CalledProcessError as e:
+    print("Command failed:")
+    print("STDOUT:\n", e.stdout)
+    print("STDERR:\n", e.stderr)
+    raise
 
 destination_dir = '/opt/ml/processing/evaluation' 
 os.makedirs(destination_dir, exist_ok=True)
