@@ -12,7 +12,7 @@ subprocess.run([
     '--log_dir', './LOG/',
     '--batch_size', '8',
     '--input_size', '224',
-    '--epochs', '1',
+    '--epochs', '10',
     '--blr', '2.5e-4',
     '--weight_decay', '0.05',
     '--model', 'conv_vit',
