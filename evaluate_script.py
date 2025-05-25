@@ -6,6 +6,11 @@ import tarfile
 
 model_tar_path = "/opt/ml/processing/model/model.tar.gz"
 extract_dir = "/opt/ml/processing/model"
+
+
+with tarfile.open(model_tar_path) as tar:
+    tar.extractall(path=extract_dir)
+    
 print("File trong model dir:", os.listdir(extract_dir))
 
 
@@ -13,7 +18,7 @@ subprocess.run(['git', 'clone', 'https://github.com/ttmq-2423/medical_mae.git'],
 os.chdir('medical_mae')
 
 # Run the evaluation script
-try 
+try: 
     result = subprocess.run([
         "python", "Brute_force.py", 
         "--batch_size", "8",
@@ -64,21 +69,51 @@ for line in result.stdout.splitlines():
             auc_per_label = [float(x.strip()) for x in label_str.split(",")]
         except Exception as e:
             print(f"Error parsing AUC per label: {e}")
+    elif "Optimal thresholds per class:" in line:
+        try:
+            thresh_str = line.split("Optimal thresholds per class:")[1].strip().strip("[]")
+            optimal_thresholds = [float(x.strip()) for x in thresh_str.split(",")]
+        except Exception as e:
+            print(f"Error parsing optimal thresholds: {e}")
 
 print(f"Extracted AUC avg: {auc_avg}")
 print(f"Extracted AUC per label: {auc_per_label}")
+print(f"Extracted Optimal thresholds: {optimal_thresholds}")
 
-# Create report
+
+
+class_names = ['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion']
+
 report_dict = {
     "metrics": {
         "auc_avg": {
-            "value": auc_avg
-        },
-        "auc_per_label": {
-            "value": auc_per_label
+            "value": float(auc_avg)
         }
-    }
+    },
+    "visualizations": [
+        {
+            "name": "confusion_matrix",
+            "value": "confusion_matrix_conv_vit.png",
+            "content_type": "image/png"
+        },
+        {
+            "name": "roc_curve", 
+            "value": "ROC_curves_conv_vit_improved.png",
+            "content_type": "image/png"
+        }
+    ]
 }
+
+for i, auc in enumerate(auc_per_label):
+    report_dict["metrics"][f"auc_{class_names[i].replace(' ', '_').lower()}"] = {
+        "value": float(auc)
+    }
+
+for i, thresh in enumerate(optimal_thresholds):
+    class_name_key = class_names[i].replace(" ", "_").lower()
+    report_dict["metrics"][f"optimal_threshold_{class_name_key}"] = {
+        "value": float(thresh)
+    }
 
 # Write to JSON
 with open(os.path.join(destination_dir, "evaluation.json"), "w") as f:
