@@ -15,7 +15,7 @@ def load_model():
     import torchvision.models as models
     model_instance = models.__dict__['densenet121'](num_classes=len(class_names))
 
-    checkpoint = torch.load('/opt/ml/model/Pretrain_densenet121.pth', map_location=torch.device('cpu'))
+    checkpoint = torch.load('/opt/ml/model/checkpoint.pth', map_location=torch.device('cpu'))
     
     if 'state_dict' in checkpoint:
         checkpoint_model = checkpoint['state_dict']
