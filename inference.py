@@ -4,6 +4,9 @@ import torchvision.transforms as transforms
 from PIL import Image
 import io
 import base64
+import os
+import boto3
+import json
 
 # === Custom model ===
 import torch.nn as nn
@@ -75,8 +78,39 @@ class ConvNeXtMobileViT(nn.Module):
 app = Flask(__name__)
 class_names = ['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion']
 
-# Load model
+# Hàm tải thresholds từ S3
+def load_thresholds_from_s3():
+    s3_client = boto3.client('s3')
+    
+    # Lấy S3 URI từ biến môi trường
+    eval_json_s3_uri = os.environ.get('EVALUATION_JSON_S3_URI')
+    if not eval_json_s3_uri:
+        raise ValueError("EVALUATION_JSON_S3_URI environment variable not set!")
+    
+    # Parse bucket và key từ S3 URI
+    bucket = eval_json_s3_uri.split('/')[2]
+    key = '/'.join(eval_json_s3_uri.split('/')[3:])
+    
+    # Tải file từ S3
+    try:
+        response = s3_client.get_object(Bucket=bucket, Key=key)
+        evaluation_data = json.loads(response['Body'].read().decode('utf-8'))
+        
+        # Trích xuất thresholds từ evaluation data
+        thresholds = {
+            'Cardiomegaly': evaluation_data['metrics']['optimal_threshold_cardiomegaly']['value'],
+            'Edema': evaluation_data['metrics']['optimal_threshold_edema']['value'],
+            'Consolidation': evaluation_data['metrics']['optimal_threshold_consolidation']['value'],
+            'Atelectasis': evaluation_data['metrics']['optimal_threshold_atelectasis']['value'],
+            'Pleural Effusion': evaluation_data['metrics']['optimal_threshold_pleural_effusion']['value']
+        }
+        return thresholds
+    except Exception as e:
+        raise RuntimeError(f"Failed to load thresholds from S3: {str(e)}")
+
+# Load model và thresholds
 def load_model():
+    # Load model
     model = ConvNeXtMobileViT(num_classes=len(class_names))
     checkpoint = torch.load('/opt/ml/model/checkpoint.pth', map_location='cpu')
     
@@ -90,9 +124,13 @@ def load_model():
     model.load_state_dict(checkpoint_model, strict=False)
     model.eval()
     model.to(torch.device('cpu'))
-    return model
+    
+    # Load thresholds
+    thresholds = load_thresholds_from_s3()
+    
+    return model, thresholds
 
-model = load_model()
+model, thresholds = load_model()
 
 # Tiền xử lý ảnh
 def preprocess_image(image_bytes):
@@ -110,7 +148,7 @@ def preprocess_image(image_bytes):
 def ping():
     return "OK", 200
 
-# Dự đoán
+# Dự đoán với áp dụng thresholds
 @app.route("/invocations", methods=["POST"])
 def predict():
     try:
@@ -123,13 +161,27 @@ def predict():
         image_tensor = preprocess_image(image_bytes)
 
         with torch.no_grad():
-            output = model(image_tensor).sigmoid().tolist()  # sigmoid for multi-label
+            logits = model(image_tensor)
+            probabilities = torch.sigmoid(logits).tolist()[0]  # sigmoid for multi-label
 
-        predictions = {class_names[i]: output[0][i] for i in range(len(class_names))}
-        return jsonify({"predictions": predictions})
+        # Áp dụng thresholds và xác định bệnh
+        results = []
+        for i, class_name in enumerate(class_names):
+            prob = probabilities[i]
+            threshold = thresholds[class_name]
+            if prob >= threshold:
+                results.append(class_name)
+
+        # Trả về danh sách các bệnh được phát hiện
+        return jsonify({
+            "detected_diseases": results,
+            "message": "Found diseases" if results else "No diseases detected"
+        })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
